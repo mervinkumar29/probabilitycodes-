@@ -1,0 +1,18 @@
+from pyspark.sql.functions import udf, col
+from pyspark.sql.types import DoubleType
+
+# assume that the RandomForest model is already trained and applied to some test data
+predictions = randomForestModel.transform(testData)
+
+# define a user-defined function to extract the probability of a given class
+class_prob_udf = udf(lambda v, i: float(v[i]), DoubleType())
+
+# create a new column for each class probability
+num_classes = len(randomForestModel._call_java("numClasses"))
+for i in range(num_classes):
+    class_col = "prob_class_{}".format(i)
+    predictions = predictions.withColumn(class_col, class_prob_udf(col("probability"), col("prediction")))
+
+# select only the class probability columns
+class_cols = ["prob_class_{}".format(i) for i in range(num_classes)]
+class_probs = predictions.select(class_cols)
