@@ -1,0 +1,38 @@
+from pyspark.ml.feature import PCA
+
+# Assuming you have already trained a PCA model on your dataset
+pca_model = ...  # Your trained PCA model
+
+# Get the explained variance ratio
+explained_variance_ratio = pca_model.explainedVariance.toArray()
+
+# Get the number of principal components
+num_components = len(explained_variance_ratio)
+
+# Get the original DataFrame used for training
+original_data = ...  # Your original DataFrame
+
+# Get the original column names
+feature_names = original_data.columns
+
+# Get the component matrix
+component_matrix = pca_model.pc.toArray()
+
+# Get the actual variable names for each component
+component_variable_names = []
+
+for i in range(num_components):
+    component_variables = []
+    component_vector = component_matrix[:, i]
+    sorted_indices = sorted(range(len(component_vector)), key=lambda k: abs(component_vector[k]), reverse=True)
+    for index in sorted_indices:
+        variable_name = feature_names[index]
+        component_variables.append(variable_name)
+    component_variable_names.append(component_variables)
+
+# Print the variable names for each component
+for i, variable_names in enumerate(component_variable_names):
+    print(f"Principal Component {i + 1} Variable Names:")
+    for name in variable_names:
+        print(name)
+    print()
