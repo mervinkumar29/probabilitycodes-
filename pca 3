@@ -1,0 +1,32 @@
+from pyspark.ml.feature import PCA
+
+# Assuming you have already trained a PCA model on your dataset
+pca_model = ...  # Your trained PCA model
+
+# Get the explained variance ratio
+explained_variance_ratio = pca_model.explainedVariance.toArray()
+
+# Get the number of principal components
+num_components = len(explained_variance_ratio)
+
+# Get the original feature names from the DataFrame
+feature_names = ...  # Your original feature names (list or array)
+
+# Get the feature importances for each principal component
+feature_importances = []
+
+for i in range(num_components):
+    component_importances = []
+    for j in range(len(explained_variance_ratio)):
+        importance = pca_model.pc.toArray()[j, i]
+        component_importances.append((feature_names[j], importance))
+    feature_importances.append(component_importances)
+
+# Print the feature importances for each principal component
+for i, importances in enumerate(feature_importances):
+    print(f"Principal Component {i + 1} Feature Importances:")
+    sorted_importances = sorted(importances, key=lambda x: abs(x[1]), reverse=True)
+    for importance in sorted_importances:
+        feature_name, importance_value = importance
+        print(f"Feature: {feature_name}, Importance: {importance_value}")
+    print()
