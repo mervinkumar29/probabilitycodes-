@@ -1,0 +1,47 @@
+from pyspark.sql import SparkSession
+from pyspark.ml.clustering import KMeans
+from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.clustering import BisectingKMeans
+
+# Create a SparkSession
+spark = SparkSession.builder.getOrCreate()
+
+# Sample DataFrame with columns "feature1", "feature2", ..., "feature15"
+data = [
+    (1.0, 2.0, ..., 15.0),
+    (4.0, 5.0, ..., 17.0),
+    # Add more data points...
+]
+df = spark.createDataFrame(data, ["feature1", "feature2", ..., "feature15"])
+
+# Assemble the input columns into a vector column
+assembler = VectorAssembler(inputCols=df.columns, outputCol="features")
+df = assembler.transform(df)
+
+# Perform k-means clustering
+kmeans = KMeans(k=3, seed=1)
+kmeansModel = kmeans.fit(df)
+df = kmeansModel.transform(df)
+
+# Get the cluster centers
+clusterCenters = kmeansModel.clusterCenters()
+
+# Create a new DataFrame with the original features and the assigned cluster labels
+clusteredData = df.select(df.columns + [kmeansModel.predict(df.features).alias("cluster")])
+
+# Extract the data points belonging to each cluster
+clusterData = []
+for cluster_label in range(kmeansModel.getK()):
+    cluster_data = clusteredData.filter(clusteredData.cluster == cluster_label)
+    clusterData.append(cluster_data)
+
+# Perform hierarchical clustering on each cluster
+hierarchicalClusters = []
+for cluster_data in clusterData:
+    bkm = BisectingKMeans(k=2, seed=1)
+    bkmModel = bkm.fit(cluster_data)
+    hierarchicalClusters.extend(bkmModel.transform(cluster_data).collect())
+
+# Show the final clusters
+finalClusters = spark.createDataFrame(hierarchicalClusters)
+finalClusters.show()
