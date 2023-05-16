@@ -1,0 +1,51 @@
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import udf
+from pyspark.sql.types import IntegerType, ArrayType
+from pyspark.ml.linalg import Vectors
+from math import pow, sqrt
+
+# Create a SparkSession
+spark = SparkSession.builder.getOrCreate()
+
+# Define the DBSCAN parameters
+eps = 1.0  # Epsilon (radius)
+minPts = 2  # Minimum number of points in a neighborhood to form a cluster
+
+# Prepare your data as a DataFrame with a vector column
+data = [
+    (1, Vectors.dense([0.0, 0.0, ..., 0.0])),
+    (2, Vectors.dense([0.1, 0.1, ..., 0.1])),
+    (3, Vectors.dense([10.0, 10.0, ..., 10.0])),
+    (4, Vectors.dense([10.1, 10.1, ..., 10.1])),
+    # Add more data points...
+]
+df = spark.createDataFrame(data, ["id", "features"])
+
+# Create a UDF to calculate the Euclidean distance between two vectors
+euclidean_distance_udf = udf(lambda v1, v2: sqrt(sum(pow((v1[i] - v2[i]), 2) for i in range(len(v1)))), DoubleType())
+
+# Find the neighbors for each point
+df = df.withColumn("neighbors", udf(lambda features: [row.features for row in df.collect() if euclidean_distance_udf(features, row.features) <= eps], ArrayType(df.schema["features"].dataType))(df.features))
+
+# Assign initial cluster IDs
+df = df.withColumn("cluster", udf(lambda neighbors: -1 if len(neighbors) < minPts else None, IntegerType())(df.neighbors))
+
+# Define a UDF for updating the cluster IDs
+def update_cluster(cluster, neighbors):
+    if cluster is None:
+        cluster = -1
+        for neighbor in neighbors:
+            if neighbor.cluster != -1:
+                cluster = neighbor.cluster
+                break
+    return cluster
+
+# Perform iterations to update cluster IDs
+converged = False
+while not converged:
+    updated_df = df.withColumn("cluster", udf(update_cluster, IntegerType())(df.cluster, df.neighbors))
+    converged = df.select("cluster").subtract(updated_df.select("cluster")).rdd.isEmpty()
+    df = updated_df
+
+# Show the final cluster assignments
+df.show()
