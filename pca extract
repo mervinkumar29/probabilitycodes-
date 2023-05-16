@@ -1,0 +1,43 @@
+from pyspark.sql import SparkSession
+from pyspark.ml.feature import PCA, VectorAssembler
+
+# Create a SparkSession
+spark = SparkSession.builder.getOrCreate()
+
+# Sample DataFrame with columns "feature1", "feature2", ..., "feature15"
+data = [
+    (1.0, 2.0, ..., 15.0),
+    (4.0, 5.0, ..., 17.0),
+    # Add more data points...
+]
+df = spark.createDataFrame(data, ["feature1", "feature2", ..., "feature15"])
+
+# Assemble the input columns into a vector column
+assembler = VectorAssembler(inputCols=df.columns, outputCol="features")
+df = assembler.transform(df)
+
+# Perform PCA
+pca = PCA(k=2, inputCol="features", outputCol="pcaFeatures")
+pcaModel = pca.fit(df)
+df = pcaModel.transform(df)
+
+# Retrieve the principal components
+principalComponents = pcaModel.pc.toArray()
+
+# Retrieve the names of the original features
+featureNames = df.schema["features"].metadata["ml_attr"]["attrs"]["numeric"]
+
+# Calculate importance of features for each principal component
+importances = []
+for i, component in enumerate(principalComponents):
+    component_importance = [(featureNames[j]["name"], abs(component[j]) * pcaModel.explainedVariance[i]) for j in range(len(featureNames))]
+    importances.append(component_importance)
+
+# Sort the importance values for each principal component
+sorted_importances = [sorted(comp_importances, key=lambda x: x[1], reverse=True) for comp_importances in importances]
+
+# Print the sorted importance values for each principal component
+for i, comp_importances in enumerate(sorted_importances):
+    print(f"Principal Component {i+1}:")
+    for feature, importance in comp_importances:
+        print(f"{feature}: {importance}")
