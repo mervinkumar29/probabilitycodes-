@@ -1,0 +1,32 @@
+from pyspark.sql import SparkSession
+from pyspark.ml.feature import VectorAssembler, Normalizer
+from pyspark.ml.clustering import KMeans
+
+# Create a SparkSession
+spark = SparkSession.builder.getOrCreate()
+
+# Sample DataFrame with columns "col1", "col2", ..., "col15"
+data = [
+    (1.0, 2.0, ..., 15.0),
+    (4.0, 5.0, ..., 17.0),
+    # Add more data points...
+]
+df = spark.createDataFrame(data, ["col1", "col2", ..., "col15"])
+
+# Assemble the input columns into a vector column
+assembler = VectorAssembler(inputCols=["col1", "col2", ..., "col15"], outputCol="features")
+df = assembler.transform(df)
+
+# Normalize the features using the Manhattan distance
+normalizer = Normalizer(inputCol="features", outputCol="normalized_features", p=1.0)
+df = normalizer.transform(df)
+
+# Apply K-means clustering with Manhattan distance
+kmeans = KMeans(k=2, distanceMeasure="manhattan", seed=42)
+model = kmeans.fit(df)
+
+# Get the cluster assignments
+predictions = model.transform(df)
+
+# Show the results
+predictions.show()
