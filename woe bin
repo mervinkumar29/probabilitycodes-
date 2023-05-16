@@ -1,0 +1,27 @@
+from pyspark.sql import SparkSession
+from pyspark.ml.feature import Bucketizer
+
+# Create a SparkSession
+spark = SparkSession.builder.getOrCreate()
+
+# Load your data into a DataFrame
+data = spark.read.format("csv").option("header", "true").load("your_data.csv")
+
+# Convert numerical and target columns to float type
+data = data.withColumn("numerical_column", data["numerical_column"].cast("float"))
+data = data.withColumn("target_variable", data["target_variable"].cast("float"))
+
+# Set the number of bins you want
+num_bins = 5
+
+# Calculate quantile thresholds for target variable
+quantiles = data.approxQuantile("target_variable", [float(i) / num_bins for i in range(1, num_bins)], 0.01)
+
+# Create the bucketizer with custom thresholds
+bucketizer = Bucketizer(splits=quantiles, inputCol="numerical_column", outputCol="bins")
+
+# Apply bucketizer to your data
+binned_data = bucketizer.transform(data)
+
+# Show the binned data
+binned_data.select("numerical_column", "bins").show()
