@@ -1,0 +1,51 @@
+from pyspark.sql import SparkSession
+from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.classification import DecisionTreeClassifier
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.ml import Pipeline
+from pyspark.ml.tree import DecisionTreeModel
+from pyspark.ml.linalg import Vectors
+import pydot
+from pydotplus import graphviz
+
+# Create a SparkSession
+spark = SparkSession.builder.getOrCreate()
+
+# Load your data into a DataFrame
+data = spark.read.format("csv").option("header", "true").load("your_data.csv")
+
+# Select the feature columns and the target column
+feature_cols = ["feature1", "feature2", "feature3"]
+target_col = "target"
+
+# Assemble the feature columns into a vector
+assembler = VectorAssembler(inputCols=feature_cols, outputCol="features")
+feature_vector = assembler.transform(data)
+
+# Split the data into training and test sets
+(training_data, test_data) = feature_vector.randomSplit([0.8, 0.2])
+
+# Create a DecisionTreeClassifier
+dt = DecisionTreeClassifier(labelCol=target_col, featuresCol="features")
+
+# Create a Pipeline with the DecisionTreeClassifier
+pipeline = Pipeline(stages=[dt])
+
+# Train the model on the training data
+model = pipeline.fit(training_data)
+
+# Get the trained DecisionTreeModel
+tree_model = model.stages[0]
+
+# Convert the DecisionTreeModel to a PySpark DataFrame
+dot_data = tree_model.toDebugString
+dot_data = dot_data.replace("|", "\n")
+
+# Create a graph from the dot data
+graph = pydot.graph_from_dot_data(dot_data)
+graph[0].set_graph_defaults(rankdir='LR')
+
+# Plot the decision tree
+image = graph.create_png()
+with open("decision_tree.png", "wb") as f:
+    f.write(image)
