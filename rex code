@@ -1,1 +1,16 @@
 
+input_string = 'GHJ-ASWER'
+
+/* Find the position of the hyphen */
+hyphen_position = POS('-', input_string)
+
+/* Extract the characters before the hyphen */
+prefix = SUBSTR(input_string, 1, hyphen_position - 1)
+
+/* Extract the characters after the hyphen and skip two characters */
+suffix = SUBSTR(input_string, hyphen_position + 3)
+
+/* Concatenate the prefix and suffix */
+output_string = prefix || suffix
+
+SAY output_string /* Output: GHJWER */
