@@ -1,0 +1,7 @@
+SELECT 
+    id,
+    name,
+    substring(address, strpos(address, '"city":') + 8, strpos(address, ',"postal":') - strpos(address, '"city":') - 8) AS city,
+    substring(address, strpos(address, '"postal":') + 10, length(address) - strpos(address, '"postal":') - 1) AS postal
+FROM
+    your_table;
